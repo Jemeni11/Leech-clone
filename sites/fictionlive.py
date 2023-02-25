@@ -15,14 +15,17 @@ class FictionLive(Site):
     @staticmethod
     def matches(url):
         # e.g. https://fiction.live/stories/Descendant-of-a-Demon-Lord/SBBA49fQavNQMWxFT
-        match = re.match(r'^(https?://fiction\.live/(?:stories|Sci-fi)/[^\/]+/[0-9a-zA-Z\-]+)/?.*', url)
+        match = re.match(
+            r'^(https?://fiction\.live/(?:stories|Sci-fi)/[^\/]+/[0-9a-zA-Z\-]+)/?.*', url)
         if match:
             return match.group(1)
 
     def extract(self, url):
-        workid = re.match(r'^https?://fiction\.live/(?:stories|Sci-fi)/[^\/]+/([0-9a-zA-Z\-]+)/?.*', url).group(1)
+        workid = re.match(
+            r'^https?://fiction\.live/(?:stories|Sci-fi)/[^\/]+/([0-9a-zA-Z\-]+)/?.*', url).group(1)
 
-        response = self.session.get(f'https://fiction.live/api/node/{workid}').json()
+        response = self.session.get(
+            f'https://fiction.live/api/node/{workid}').json()
 
         story = Section(
             title=response['t'],
@@ -34,7 +37,8 @@ class FictionLive(Site):
         # There's a summary (or similar) in `d` and `b`, if I want to use that later.
 
         # TODO: extract these #special ones and send them off to an endnotes section?
-        chapters = ({'ct': 0},) + tuple(c for c in response['bm'] if not c['title'].startswith('#special')) + ({'ct': 9999999999999999},)
+        chapters = ({'ct': 0},) + tuple(c for c in response['bm'] if not c['title'].startswith(
+            '#special')) + ({'ct': 9999999999999999},)
 
         for prevc, currc, nextc in contextiterate(chapters):
             # `id`, `title`, `ct`, `isFirst`
@@ -43,7 +47,8 @@ class FictionLive(Site):
             # https://fiction.live/api/anonkun/chapters/SBBA49fQavNQMWxFT/1502823848216/9999999999999998
             # i.e. format is [current timestamp] / [next timestamp - 1]
             chapter_url = f'https://fiction.live/api/anonkun/chapters/{workid}/{currc["ct"]}/{nextc["ct"] - 1}'
-            logger.info("Extracting chapter \"%s\" @ %s", currc['title'], chapter_url)
+            logger.info("Extracting chapter \"%s\" @ %s",
+                        currc['title'], chapter_url)
             data = self.session.get(chapter_url).json()
             html = []
 
@@ -54,7 +59,8 @@ class FictionLive(Site):
                 # There's at least also a reader post type, which mostly seems to be used for die rolls.
                 try:
                     if segment['nt'] == 'chapter':
-                        html.extend(('<div>', segment['b'].replace('<br>', '<br/>'), '</div>'))
+                        html.extend(
+                            ('<div>', segment['b'].replace('<br>', '<br/>'), '</div>'))
                     elif segment['nt'] == 'choice':
                         if 'votes' not in segment:
                             # Somehow, sometime, we end up with a choice without votes (or choices)
@@ -83,9 +89,11 @@ class FictionLive(Site):
                     elif segment['nt'] == 'readerPost':
                         pass
                     else:
-                        logger.info("Skipped chapter-segment of unhandled type: %s", segment['nt'])
+                        logger.info(
+                            "Skipped chapter-segment of unhandled type: %s", segment['nt'])
                 except Exception as e:
-                    logger.error("Skipped chapter-segment due to parsing error", exc_info=e)
+                    logger.error(
+                        "Skipped chapter-segment due to parsing error", exc_info=e)
 
             story.add(Chapter(
                 title=currc['title'],
